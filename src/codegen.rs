@@ -63,7 +63,7 @@ fn generate_property_declarations(properties: Vec<PropertyDeclaration>) -> Strin
 
     for property in properties {
         let PropertyDeclaration { c_type, name } = property;
-        output.push_str(format!("    {c_type} {name};\n").as_str());
+        output.push_str(format!("\t{c_type} {name};\n").as_str());
     }
 
     output
@@ -111,13 +111,13 @@ mod test {
         ])]);
 
         let expected = 
-r#"typedef struct Portal {
-    uint8_t x;
-    uint8_t y;
-    uint8_t target_x;
-    uint8_t target_y;
+"typedef struct Portal {
+\tuint8_t x;
+\tuint8_t y;
+\tuint8_t target_x;
+\tuint8_t target_y;
 } Portal;
-"#;
+";
 
         assert_eq!(output, expected);
     }
