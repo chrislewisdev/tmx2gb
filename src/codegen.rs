@@ -14,6 +14,9 @@ enum Value {
     },
     StructValue {
         properties: Vec<PropertyValue>
+    },
+    Array {
+        values: Vec<Value>
     }
 }
 
@@ -65,6 +68,7 @@ fn generate_value(value: &Value, nesting: usize) -> String {
     match value {
         Value::Literal { value } => value.clone(),
         Value::StructValue { properties } => generate_property_values(properties, nesting),
+        Value::Array { values } => generate_array_values(values),
     }
 }
 
@@ -90,6 +94,18 @@ fn generate_property_values(properties: &Vec<PropertyValue>, nesting: usize) -> 
     }
     output.push_str("\t".repeat(nesting - 1).as_str());
     output.push_str("}");
+
+    output
+}
+
+fn generate_array_values(values: &Vec<Value>) -> String {
+    let mut output = String::from("[\n");
+    
+    for value in values {
+        let value_str = generate_value(&value, 1);
+        output.push_str(format!("\t{value_str},\n").as_str());
+    }
+    output.push_str("]");
 
     output
 }
@@ -128,6 +144,10 @@ mod test {
 
     fn prop_value(name: &str, value: Value) -> PropertyValue {
         PropertyValue { name: name.to_string(), value }
+    }
+
+    fn array(values: Vec<Value>) -> Value {
+        Value::Array { values }
     }
 
     #[test]
@@ -209,6 +229,25 @@ mod test {
 };
 ";
 
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn test_array() {
+        let output = generate(vec![const_dec("array", "int*", array(vec![
+            literal("1"),
+            literal("2"),
+            literal("3"),
+        ]))]);
+
+        let expected =
+"const int* array = [
+\t1,
+\t2,
+\t3,
+];
+";
+        
         assert_eq!(output, expected);
     }
 }
