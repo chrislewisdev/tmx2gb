@@ -20,7 +20,7 @@ enum Value {
     }
 }
 
-enum Statement {
+enum AstNode {
     Include {
         filename: String,
     },
@@ -39,22 +39,22 @@ enum Statement {
     }
 }
 
-fn generate(ast: Vec<Statement>) -> String {
+fn generate(ast: Vec<AstNode>) -> String {
     let mut output = String::new();
 
     for statement in ast {
         match statement {
-            Statement::Include { filename } => {
+            AstNode::Include { filename } => {
                 output.push_str(format!("#include \"{}\"\n", filename).as_str());
             }
-            Statement::Define { name, value } => {
+            AstNode::Define { name, value } => {
                 output.push_str(format!("#define {} {}\n", name, value).as_str())
             },
-            Statement::StructDeclaration { name, properties } => {
+            AstNode::StructDeclaration { name, properties } => {
                 let properties_str = generate_property_declarations(&properties);
                 output.push_str(format!("typedef struct {name} {{\n{properties_str}}} {name};\n").as_str());
             },
-            Statement::Const { name, c_type, value } => {
+            AstNode::Const { name, c_type, value } => {
                 let value_str = generate_value(&value, 1);
                 output.push_str(format!("const {c_type} {name} = {value_str};\n").as_str());
             },
@@ -99,13 +99,13 @@ fn generate_property_values(properties: &Vec<PropertyValue>, nesting: usize) -> 
 }
 
 fn generate_array_values(values: &Vec<Value>) -> String {
-    let mut output = String::from("[\n");
+    let mut output = String::from("{\n");
     
     for value in values {
         let value_str = generate_value(&value, 1);
         output.push_str(format!("\t{value_str},\n").as_str());
     }
-    output.push_str("]");
+    output.push_str("}");
 
     output
 }
@@ -114,24 +114,24 @@ fn generate_array_values(values: &Vec<Value>) -> String {
 mod test {
     use super::*;
 
-    fn include(filename: &str) -> Statement {
-        Statement::Include { filename: filename.to_string() }
+    fn include(filename: &str) -> AstNode {
+        AstNode::Include { filename: filename.to_string() }
     }
 
-    fn define(name: &str, value: &str) -> Statement {
-        Statement::Define { name: name.to_string(), value: value.to_string() }
+    fn define(name: &str, value: &str) -> AstNode {
+        AstNode::Define { name: name.to_string(), value: value.to_string() }
     }
 
-    fn struct_dec(name: &str, properties: Vec<PropertyDeclaration>) -> Statement {
-        Statement::StructDeclaration { name: name.to_string(), properties }
+    fn struct_dec(name: &str, properties: Vec<PropertyDeclaration>) -> AstNode {
+        AstNode::StructDeclaration { name: name.to_string(), properties }
     }
 
     fn prop_dec(name: &str, c_type: &str) -> PropertyDeclaration {
         PropertyDeclaration { name: name.to_string(), c_type: c_type.to_string() }
     }
 
-    fn const_dec(name: &str, c_type: &str, value: Value) -> Statement {
-        Statement::Const { name: name.to_string(), c_type: c_type.to_string(), value }
+    fn const_dec(name: &str, c_type: &str, value: Value) -> AstNode {
+        AstNode::Const { name: name.to_string(), c_type: c_type.to_string(), value }
     }
 
     fn literal(value: &str) -> Value {
@@ -241,11 +241,11 @@ mod test {
         ]))]);
 
         let expected =
-"const int* array = [
+"const int* array = {
 \t1,
 \t2,
 \t3,
-];
+};
 ";
         
         assert_eq!(output, expected);
