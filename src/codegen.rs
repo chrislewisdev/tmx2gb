@@ -16,7 +16,8 @@ pub enum Value {
         properties: Vec<PropertyValue>
     },
     Array {
-        values: Vec<Value>
+        values: Vec<Value>,
+        hint_array_width: Option<u32>
     }
 }
 
@@ -68,7 +69,7 @@ fn generate_value(value: &Value, nesting: usize) -> String {
     match value {
         Value::Literal { value } => value.clone(),
         Value::StructValue { properties } => generate_property_values(properties, nesting),
-        Value::Array { values } => generate_array_values(values),
+        Value::Array { values, hint_array_width } => generate_array_values(values, hint_array_width),
     }
 }
 
@@ -98,12 +99,19 @@ fn generate_property_values(properties: &Vec<PropertyValue>, nesting: usize) -> 
     output
 }
 
-fn generate_array_values(values: &Vec<Value>) -> String {
-    let mut output = String::from("{\n");
+fn generate_array_values(values: &Vec<Value>, hint_array_width: &Option<u32>) -> String {
+    let mut output = String::from("{\n\t");
+    let mut width: u32 = 0;
     
     for value in values {
         let value_str = generate_value(&value, 1);
-        output.push_str(format!("\t{value_str},\n").as_str());
+        output.push_str(format!("{value_str},").as_str());
+
+        width += 1;
+        if hint_array_width.is_some_and(|v| v == width) {
+            output.push_str("\n\t");
+            width = 0;
+        }
     }
     output.push_str("}");
 
@@ -147,7 +155,7 @@ mod test {
     }
 
     fn array(values: Vec<Value>) -> Value {
-        Value::Array { values }
+        Value::Array { values, hint_array_width: None }
     }
 
     #[test]

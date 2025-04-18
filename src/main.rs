@@ -34,7 +34,8 @@ fn cli() -> anyhow::Result<()> {
         c_type: "uint8_t".to_string(),
         name: "village_tiles".to_string(),
         value: codegen::Value::Array {
-            values: array_values
+            values: array_values,
+            hint_array_width: Some(width as u32)
         }
     }];
     let output = codegen::generate(ast);
