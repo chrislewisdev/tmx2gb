@@ -1,14 +1,14 @@
-struct PropertyDeclaration {
+pub struct PropertyDeclaration {
     name: String,
     c_type: String,
 }
 
-struct PropertyValue {
+pub struct PropertyValue {
     name: String,
     value: Value,
 }
 
-enum Value {
+pub enum Value {
     Literal {
         value: String,
     },
@@ -20,7 +20,7 @@ enum Value {
     }
 }
 
-enum AstNode {
+pub enum AstNode {
     Include {
         filename: String,
     },
@@ -39,7 +39,7 @@ enum AstNode {
     }
 }
 
-fn generate(ast: Vec<AstNode>) -> String {
+pub fn generate(ast: Vec<AstNode>) -> String {
     let mut output = String::new();
 
     for statement in ast {
