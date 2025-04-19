@@ -113,6 +113,10 @@ fn generate_array_values(values: &Vec<Value>, hint_array_width: &Option<u32>) ->
             width = 0;
         }
     }
+
+    if hint_array_width.is_none() {
+        output.push_str("\n");
+    }
     output.push_str("}");
 
     output
@@ -250,9 +254,7 @@ mod test {
 
         let expected =
 "const int* array = {
-\t1,
-\t2,
-\t3,
+\t1,2,3,
 };
 ";
         
