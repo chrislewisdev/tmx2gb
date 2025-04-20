@@ -57,7 +57,12 @@ pub fn generate(ast: Vec<AstNode>) -> String {
             },
             AstNode::Const { name, c_type, value } => {
                 let value_str = generate_value(&value, 1);
-                output.push_str(format!("const {c_type} {name} = {value_str};\n").as_str());
+                if let Value::Array { values, .. } = value {
+                    let size = values.len();
+                    output.push_str(format!("const {c_type} {name}[{size}] = {value_str};\n").as_str());
+                } else {
+                    output.push_str(format!("const {c_type} {name} = {value_str};\n").as_str());
+                }
             },
         }
     }
@@ -100,23 +105,23 @@ fn generate_property_values(properties: &Vec<PropertyValue>, nesting: usize) -> 
 }
 
 fn generate_array_values(values: &Vec<Value>, hint_array_width: &Option<u32>) -> String {
-    let mut output = String::from("{\n\t");
-    let mut width: u32 = 0;
-    
-    for value in values {
-        let value_str = generate_value(&value, 1);
-        output.push_str(format!("{value_str},").as_str());
+    let mut output = String::from("{\n");
 
-        width += 1;
-        if hint_array_width.is_some_and(|v| v == width) {
-            output.push_str("\n\t");
-            width = 0;
+    if let Some(width) = hint_array_width {
+        let rows = values.chunks(*width as usize);
+        for row in rows {
+            let mapped = row.iter().map(|v| generate_value(v, 1)).collect::<Vec<String>>();
+            output.push_str("\t");
+            output.push_str(mapped.join(",").as_str());
+            output.push_str(",\n");
         }
+    } else {
+        let mapped = values.iter().map(|v| generate_value(v, 1)).collect::<Vec<String>>();
+        output.push_str("\t");
+        output.push_str(mapped.join(",").as_str());
+        output.push_str(",\n");
     }
 
-    if hint_array_width.is_none() {
-        output.push_str("\n");
-    }
     output.push_str("}");
 
     output
@@ -246,14 +251,14 @@ mod test {
 
     #[test]
     fn test_array() {
-        let output = generate(vec![const_dec("array", "int*", array(vec![
+        let output = generate(vec![const_dec("array", "int", array(vec![
             literal("1"),
             literal("2"),
             literal("3"),
         ]))]);
 
         let expected =
-"const int* array = {
+"const int array[3] = {
 \t1,2,3,
 };
 ";

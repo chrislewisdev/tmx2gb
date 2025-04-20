@@ -1,5 +1,5 @@
 use anyhow::{Context, Error};
-use tiled::Loader;
+use tiled::{Loader, Map};
 
 mod codegen;
 
@@ -13,6 +13,13 @@ fn cli() -> anyhow::Result<()> {
     let mut loader = Loader::new();
     let map = loader.load_tmx_map("samples/village.tmx")?;
 
+    let output = generate_map_array(&map)?;
+    println!("{}", output);
+
+    Ok(())
+}
+
+fn generate_map_array(map: &Map) -> anyhow::Result<String> {
     let tile_layers: Vec<_> = map.layers().filter_map(|l| l.as_tile_layer()).collect();
     if tile_layers.len() != 1 {
         return Err(Error::msg("Exactly one tile layer is required"));
@@ -40,7 +47,23 @@ fn cli() -> anyhow::Result<()> {
     }];
     let output = codegen::generate(ast);
 
-    println!("{}", output);
+    Ok(output)
+}
 
-    Ok(())
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_map_array() -> Result<(), anyhow::Error> {
+        let mut loader = Loader::new();
+        let map = loader.load_tmx_map("samples/village.tmx")?;
+
+        let code = generate_map_array(&map)?;
+        let expected = include_str!("../samples/village_map.c");
+
+        assert_eq!(expected, code);
+
+        Ok(())
+    }
 }
