@@ -32,8 +32,8 @@ fn generate_map_array(map: &Map) -> anyhow::Result<String> {
     for y in 0..height {
         for x in 0..width {
             let tile = tiles.get_tile(x, y).context("Failed to get tile")?;
-            let tile_index = tile.id().to_string();
-            array_values.push(codegen::Value::Literal { value: tile_index });
+            let tile_index = u8::try_from(tile.id()).context("Tile indices cannot exceed 255")?;
+            array_values.push(codegen::Value::Uint8 { value: tile_index });
         }
     }
 

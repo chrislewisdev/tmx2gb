@@ -9,7 +9,10 @@ pub struct PropertyValue {
 }
 
 pub enum Value {
-    Literal {
+    Uint8 {
+        value: u8,
+    },
+    Str {
         value: String,
     },
     StructValue {
@@ -72,7 +75,8 @@ pub fn generate(ast: Vec<AstNode>) -> String {
 
 fn generate_value(value: &Value, nesting: usize) -> String {
     match value {
-        Value::Literal { value } => value.clone(),
+        Value::Uint8 { value } => format!("{:#04x}", value),
+        Value::Str { value } => value.clone(),
         Value::StructValue { properties } => generate_property_values(properties, nesting),
         Value::Array { values, hint_array_width } => generate_array_values(values, hint_array_width),
     }
@@ -152,7 +156,7 @@ mod test {
     }
 
     fn literal(value: &str) -> Value {
-        Value::Literal { value: value.to_string() }
+        Value::Str { value: value.to_string() }
     }
 
     fn struct_value(properties: Vec<PropertyValue>) -> Value {
