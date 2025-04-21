@@ -42,8 +42,8 @@ fn generate_map_array(map: &Map) -> anyhow::Result<String> {
         name: "village_tiles".to_string(),
         value: codegen::Value::Array {
             values: array_values,
-            hint_array_width: Some(width as u32)
-        }
+            hint_array_width: Some(width as u32),
+        },
     }];
     let output = codegen::generate(ast);
 

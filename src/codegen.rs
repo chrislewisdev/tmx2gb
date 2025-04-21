@@ -16,12 +16,12 @@ pub enum Value {
         value: String,
     },
     StructValue {
-        properties: Vec<PropertyValue>
+        properties: Vec<PropertyValue>,
     },
     Array {
         values: Vec<Value>,
-        hint_array_width: Option<u32>
-    }
+        hint_array_width: Option<u32>,
+    },
 }
 
 pub enum AstNode {
@@ -39,8 +39,8 @@ pub enum AstNode {
     Const {
         name: String,
         c_type: String,
-        value: Value
-    }
+        value: Value,
+    },
 }
 
 pub fn generate(ast: Vec<AstNode>) -> String {
@@ -53,20 +53,28 @@ pub fn generate(ast: Vec<AstNode>) -> String {
             }
             AstNode::Define { name, value } => {
                 output.push_str(format!("#define {} {}\n", name, value).as_str())
-            },
+            }
             AstNode::StructDeclaration { name, properties } => {
                 let properties_str = generate_property_declarations(&properties);
-                output.push_str(format!("typedef struct {name} {{\n{properties_str}}} {name};\n").as_str());
-            },
-            AstNode::Const { name, c_type, value } => {
+                output.push_str(
+                    format!("typedef struct {name} {{\n{properties_str}}} {name};\n").as_str(),
+                );
+            }
+            AstNode::Const {
+                name,
+                c_type,
+                value,
+            } => {
                 let value_str = generate_value(&value, 1);
                 if let Value::Array { values, .. } = value {
                     let size = values.len();
-                    output.push_str(format!("const {c_type} {name}[{size}] = {value_str};\n").as_str());
+                    output.push_str(
+                        format!("const {c_type} {name}[{size}] = {value_str};\n").as_str(),
+                    );
                 } else {
                     output.push_str(format!("const {c_type} {name} = {value_str};\n").as_str());
                 }
-            },
+            }
         }
     }
 
@@ -78,7 +86,10 @@ fn generate_value(value: &Value, nesting: usize) -> String {
         Value::Uint8 { value } => format!("{:#04x}", value),
         Value::Str { value } => value.clone(),
         Value::StructValue { properties } => generate_property_values(properties, nesting),
-        Value::Array { values, hint_array_width } => generate_array_values(values, hint_array_width),
+        Value::Array {
+            values,
+            hint_array_width,
+        } => generate_array_values(values, hint_array_width),
     }
 }
 
@@ -96,7 +107,7 @@ fn generate_property_declarations(properties: &Vec<PropertyDeclaration>) -> Stri
 fn generate_property_values(properties: &Vec<PropertyValue>, nesting: usize) -> String {
     let mut output = String::from("{\n");
     let indentation = "\t".repeat(nesting);
-    
+
     for property in properties {
         let PropertyValue { name, value } = property;
         let value_str = generate_value(value, nesting + 1);
@@ -114,13 +125,19 @@ fn generate_array_values(values: &Vec<Value>, hint_array_width: &Option<u32>) ->
     if let Some(width) = hint_array_width {
         let rows = values.chunks(*width as usize);
         for row in rows {
-            let mapped = row.iter().map(|v| generate_value(v, 1)).collect::<Vec<String>>();
+            let mapped = row
+                .iter()
+                .map(|v| generate_value(v, 1))
+                .collect::<Vec<String>>();
             output.push_str("\t");
             output.push_str(mapped.join(",").as_str());
             output.push_str(",\n");
         }
     } else {
-        let mapped = values.iter().map(|v| generate_value(v, 1)).collect::<Vec<String>>();
+        let mapped = values
+            .iter()
+            .map(|v| generate_value(v, 1))
+            .collect::<Vec<String>>();
         output.push_str("\t");
         output.push_str(mapped.join(",").as_str());
         output.push_str(",\n");
@@ -136,27 +153,44 @@ mod test {
     use super::*;
 
     fn include(filename: &str) -> AstNode {
-        AstNode::Include { filename: filename.to_string() }
+        AstNode::Include {
+            filename: filename.to_string(),
+        }
     }
 
     fn define(name: &str, value: &str) -> AstNode {
-        AstNode::Define { name: name.to_string(), value: value.to_string() }
+        AstNode::Define {
+            name: name.to_string(),
+            value: value.to_string(),
+        }
     }
 
     fn struct_dec(name: &str, properties: Vec<PropertyDeclaration>) -> AstNode {
-        AstNode::StructDeclaration { name: name.to_string(), properties }
+        AstNode::StructDeclaration {
+            name: name.to_string(),
+            properties,
+        }
     }
 
     fn prop_dec(name: &str, c_type: &str) -> PropertyDeclaration {
-        PropertyDeclaration { name: name.to_string(), c_type: c_type.to_string() }
+        PropertyDeclaration {
+            name: name.to_string(),
+            c_type: c_type.to_string(),
+        }
     }
 
     fn const_dec(name: &str, c_type: &str, value: Value) -> AstNode {
-        AstNode::Const { name: name.to_string(), c_type: c_type.to_string(), value }
+        AstNode::Const {
+            name: name.to_string(),
+            c_type: c_type.to_string(),
+            value,
+        }
     }
 
     fn literal(value: &str) -> Value {
-        Value::Str { value: value.to_string() }
+        Value::Str {
+            value: value.to_string(),
+        }
     }
 
     fn struct_value(properties: Vec<PropertyValue>) -> Value {
@@ -164,11 +198,17 @@ mod test {
     }
 
     fn prop_value(name: &str, value: Value) -> PropertyValue {
-        PropertyValue { name: name.to_string(), value }
+        PropertyValue {
+            name: name.to_string(),
+            value,
+        }
     }
 
     fn array(values: Vec<Value>) -> Value {
-        Value::Array { values, hint_array_width: None }
+        Value::Array {
+            values,
+            hint_array_width: None,
+        }
     }
 
     #[test]
@@ -185,15 +225,17 @@ mod test {
 
     #[test]
     fn test_struct() {
-        let output = generate(vec![struct_dec("Portal", vec![
-            prop_dec("x", "uint8_t"),
-            prop_dec("y", "uint8_t"),
-            prop_dec("target_x", "uint8_t"),
-            prop_dec("target_y", "uint8_t"),
-        ])]);
+        let output = generate(vec![struct_dec(
+            "Portal",
+            vec![
+                prop_dec("x", "uint8_t"),
+                prop_dec("y", "uint8_t"),
+                prop_dec("target_x", "uint8_t"),
+                prop_dec("target_y", "uint8_t"),
+            ],
+        )]);
 
-        let expected = 
-"typedef struct Portal {
+        let expected = "typedef struct Portal {
 \tuint8_t x;
 \tuint8_t y;
 \tuint8_t target_x;
@@ -215,15 +257,18 @@ mod test {
 
     #[test]
     fn test_struct_value() {
-        let output = generate(vec![const_dec("portal", "Portal", struct_value(vec![
-            prop_value("x", literal("1")),
-            prop_value("y", literal("2")),
-            prop_value("target_x", literal("3")),
-            prop_value("target_y", literal("4")),
-        ]))]);
+        let output = generate(vec![const_dec(
+            "portal",
+            "Portal",
+            struct_value(vec![
+                prop_value("x", literal("1")),
+                prop_value("y", literal("2")),
+                prop_value("target_x", literal("3")),
+                prop_value("target_y", literal("4")),
+            ]),
+        )]);
 
-        let expected =
-"const Portal portal = {
+        let expected = "const Portal portal = {
 \t.x = 1,
 \t.y = 2,
 \t.target_x = 3,
@@ -236,14 +281,16 @@ mod test {
 
     #[test]
     fn test_nested_struct() {
-        let output = generate(vec![const_dec("portal", "Portal", struct_value(vec![
-            prop_value("nested", struct_value(vec![
-                prop_value("x", literal("1")),
-            ])),
-        ]))]);
+        let output = generate(vec![const_dec(
+            "portal",
+            "Portal",
+            struct_value(vec![prop_value(
+                "nested",
+                struct_value(vec![prop_value("x", literal("1"))]),
+            )]),
+        )]);
 
-        let expected =
-"const Portal portal = {
+        let expected = "const Portal portal = {
 \t.nested = {
 \t\t.x = 1,
 \t},
@@ -255,18 +302,17 @@ mod test {
 
     #[test]
     fn test_array() {
-        let output = generate(vec![const_dec("array", "int", array(vec![
-            literal("1"),
-            literal("2"),
-            literal("3"),
-        ]))]);
+        let output = generate(vec![const_dec(
+            "array",
+            "int",
+            array(vec![literal("1"), literal("2"), literal("3")]),
+        )]);
 
-        let expected =
-"const int array[3] = {
+        let expected = "const int array[3] = {
 \t1,2,3,
 };
 ";
-        
+
         assert_eq!(output, expected);
     }
 }
