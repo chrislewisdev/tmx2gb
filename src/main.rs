@@ -1,6 +1,7 @@
 mod codegen;
 mod convert;
 
+use anyhow::Context;
 use clap::{Parser, command};
 use std::{
     fs::{self, DirEntry},
@@ -11,7 +12,7 @@ use tiled::{Loader, Map};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(required = true)]
+    #[arg(required = true, short, long)]
     input_directory: PathBuf,
     #[arg(required = true, short, long)]
     output_directory: PathBuf,
@@ -32,17 +33,21 @@ fn cli(args: &Args) -> anyhow::Result<()> {
         tmx.iter().map(|f| loader.load_tmx_map(f.path())).collect();
     let maps = maps_result?;
 
+    fs::create_dir_all(args.output_directory.clone())?;
+
     for map in maps.iter() {
-        let header_ast = convert::generate_header(map)?;
-        let header = codegen::generate(header_ast);
-        println!("{}", header);
+        let source_name = map
+            .source
+            .file_name()
+            .context("Failed to retrieve file name from map source")?;
+        let output_path = args.output_directory.join(source_name);
 
-        let src_ast = convert::generate_src(map)?;
-        let src = codegen::generate(src_ast);
-        println!("{}", src);
+        let header = codegen::generate(convert::generate_header(map)?);
+        std::fs::write(output_path.with_extension("h"), header)?;
+
+        let src = codegen::generate(convert::generate_src(map)?);
+        std::fs::write(output_path.with_extension("c"), src)?;
     }
-
-    // fs::create_dir_all(args.output_directory.clone())?;
 
     Ok(())
 }
