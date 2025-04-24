@@ -3,15 +3,12 @@ use tiled::Map;
 
 use crate::codegen::{self, AstNode};
 
-pub fn generate_header(_map: &Map) -> anyhow::Result<Vec<AstNode>> {
-    Ok(vec![])
+pub fn build_ast(map: &Map) -> anyhow::Result<(Vec<AstNode>, Vec<AstNode>)> {
+    let (map_defines, map) = build_tile_data(map)?;
+    Ok((map_defines, vec![map]))
 }
 
-pub fn generate_src(map: &Map) -> anyhow::Result<Vec<AstNode>> {
-    generate_map_array(map)
-}
-
-fn generate_map_array(map: &Map) -> anyhow::Result<Vec<AstNode>> {
+fn build_tile_data(map: &Map) -> anyhow::Result<(Vec<AstNode>, AstNode)> {
     let tile_layers: Vec<_> = map.layers().filter_map(|l| l.as_tile_layer()).collect();
     if tile_layers.len() != 1 {
         return Err(Error::msg("Exactly one tile layer is required"));
@@ -29,16 +26,33 @@ fn generate_map_array(map: &Map) -> anyhow::Result<Vec<AstNode>> {
         }
     }
 
-    let ast = vec![codegen::AstNode::Const {
+    let name = map
+        .source
+        .file_stem()
+        .context("Failed to retrieve file stem from map source")?
+        .to_string_lossy()
+        .to_string();
+    let tile_data = codegen::AstNode::Const {
         c_type: "uint8_t".to_string(),
-        name: "village_tiles".to_string(),
+        name: format!("{name}_map"),
         value: codegen::Value::Array {
             values: array_values,
             hint_array_width: Some(width as u32),
         },
-    }];
+    };
 
-    Ok(ast)
+    let header_data = vec![
+        codegen::AstNode::Define {
+            name: format!("{name}_WIDTH"),
+            value: width.to_string(),
+        },
+        codegen::AstNode::Define {
+            name: format!("{name}_HEIGHT"),
+            value: height.to_string(),
+        },
+    ];
+
+    Ok((header_data, tile_data))
 }
 
 #[cfg(test)]
@@ -51,10 +65,10 @@ mod test {
         let mut loader = Loader::new();
         let map = loader.load_tmx_map("samples/village.tmx")?;
 
-        let ast = generate_map_array(&map)?;
+        let (_header_ast, map) = build_tile_data(&map)?;
         let expected = include_str!("../samples/village_map.c");
 
-        assert_eq!(expected, codegen::generate(ast));
+        assert_eq!(expected, codegen::generate(vec![map]));
 
         Ok(())
     }

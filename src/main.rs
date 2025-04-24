@@ -42,10 +42,12 @@ fn cli(args: &Args) -> anyhow::Result<()> {
             .context("Failed to retrieve file name from map source")?;
         let output_path = args.output_directory.join(source_name);
 
-        let header = codegen::generate(convert::generate_header(map)?);
+        let (header_ast, src_ast) = convert::build_ast(map)?;
+
+        let header = codegen::generate(header_ast);
         std::fs::write(output_path.with_extension("h"), header)?;
 
-        let src = codegen::generate(convert::generate_src(map)?);
+        let src = codegen::generate(src_ast);
         std::fs::write(output_path.with_extension("c"), src)?;
     }
 
