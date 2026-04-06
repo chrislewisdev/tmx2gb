@@ -34,6 +34,11 @@ pub enum AstNode {
         name: String,
         value: String,
     },
+    Ifndef {
+        name: String,
+    },
+    Endif,
+    Space,
     StructDeclaration {
         name: String,
         properties: Vec<PropertyDeclaration>,
@@ -43,6 +48,11 @@ pub enum AstNode {
         c_type: String,
         value: Value,
     },
+    ExternConst {
+        name: String,
+        c_type: String,
+        array_size: Option<u32>,
+    }
 }
 
 pub fn generate(ast: Vec<AstNode>) -> String {
@@ -54,7 +64,16 @@ pub fn generate(ast: Vec<AstNode>) -> String {
                 output.push_str(format!("#include \"{}\"\n", filename).as_str());
             }
             AstNode::Define { name, value } => {
-                output.push_str(format!("#define {} {}\n", name, value).as_str())
+                output.push_str(format!("#define {} {}\n", name, value).as_str());
+            }
+            AstNode::Ifndef { name } => {
+                output.push_str(format!("#ifndef {}\n", name).as_str());
+            }
+            AstNode::Endif => {
+                output.push_str("#endif\n");
+            }
+            AstNode::Space => {
+                output.push_str("\n");
             }
             AstNode::StructDeclaration { name, properties } => {
                 let properties_str = generate_property_declarations(&properties);
@@ -76,6 +95,13 @@ pub fn generate(ast: Vec<AstNode>) -> String {
                 } else {
                     output.push_str(format!("const {c_type} {name} = {value_str};\n").as_str());
                 }
+            }
+            AstNode::ExternConst { name, c_type, array_size } => {
+                output.push_str(format!("extern const {c_type} {name}").as_str());
+                if let Some(size) = array_size {
+                    output.push_str(format!("[{size}]").as_str());
+                }
+                output.push_str(";\n");
             }
         }
     }
@@ -164,6 +190,12 @@ mod test {
         AstNode::Define {
             name: name.to_string(),
             value: value.to_string(),
+        }
+    }
+
+    fn ifndef(name: &str) -> AstNode {
+        AstNode::Ifndef {
+            name: name.to_string(),
         }
     }
 
@@ -314,6 +346,20 @@ mod test {
 \t1,2,3,
 };
 ";
+
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn test_ifndef() {
+        let output = generate(vec![
+            ifndef("MAP_H"),
+            define("MAP_H", ""),
+            AstNode::Endif,
+        ]);
+
+        // Extra space at the end of the #define is expected
+        let expected = "#ifndef MAP_H\n#define MAP_H \n#endif\n";
 
         assert_eq!(output, expected);
     }

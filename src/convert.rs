@@ -17,6 +17,7 @@ fn build_tile_data(map: &Map) -> anyhow::Result<(Vec<AstNode>, AstNode)> {
     let tiles = tile_layers.get(0).context("Should have 1 element")?;
     let width = tiles.width().context("Map must be finite")? as i32;
     let height = tiles.height().context("Map must be finite")? as i32;
+    let array_size = width * height;
     let mut array_values: Vec<codegen::Value> = Vec::new();
     for y in 0..height {
         for x in 0..width {
@@ -42,6 +43,14 @@ fn build_tile_data(map: &Map) -> anyhow::Result<(Vec<AstNode>, AstNode)> {
     };
 
     let header_data = vec![
+        codegen::AstNode::Ifndef {
+            name: format!("{name}_HEADER"),
+        },
+        codegen::AstNode::Define {
+            name: format!("{name}_HEADER"),
+            value: String::new(),
+        },
+        codegen::AstNode::Space,
         codegen::AstNode::Define {
             name: format!("{name}_WIDTH"),
             value: width.to_string(),
@@ -50,6 +59,13 @@ fn build_tile_data(map: &Map) -> anyhow::Result<(Vec<AstNode>, AstNode)> {
             name: format!("{name}_HEIGHT"),
             value: height.to_string(),
         },
+        codegen::AstNode::ExternConst {
+            c_type: "uint8_t".to_string(),
+            name: format!("{name}_map"),
+            array_size: Some(array_size as u32)
+        },
+        codegen::AstNode::Space,
+        codegen::AstNode::Endif,
     ];
 
     Ok((header_data, tile_data))
@@ -69,6 +85,19 @@ mod test {
         let expected = include_str!("../samples/village_map.c");
 
         assert_eq!(expected, codegen::generate(vec![map]));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_header() -> Result<(), anyhow::Error> {
+        let mut loader = Loader::new();
+        let map = loader.load_tmx_map("samples/village.tmx")?;
+
+        let (header_ast, _map) = build_tile_data(&map)?;
+        let expected = include_str!("../samples/village_map.h");
+
+        assert_eq!(expected, codegen::generate(header_ast));
 
         Ok(())
     }
