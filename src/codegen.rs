@@ -8,6 +8,7 @@ pub struct PropertyValue {
     value: Value,
 }
 
+#[allow(dead_code)]
 pub enum Value {
     Uint8 {
         value: u8,
@@ -24,6 +25,7 @@ pub enum Value {
     },
 }
 
+#[allow(dead_code)]
 pub enum AstNode {
     Include {
         filename: String,
