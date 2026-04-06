@@ -5,7 +5,13 @@ use crate::codegen::{self, AstNode};
 
 pub fn build_ast(map: &Map) -> anyhow::Result<(Vec<AstNode>, Vec<AstNode>)> {
     let (map_defines, map) = build_tile_data(map)?;
-    Ok((map_defines, vec![map]))
+    Ok((map_defines, vec![
+        codegen::AstNode::Include {
+            filename: String::from("stdint.h"),
+        },
+        codegen::AstNode::Space,
+        map,
+    ]))
 }
 
 fn build_tile_data(map: &Map) -> anyhow::Result<(Vec<AstNode>, AstNode)> {
@@ -42,6 +48,7 @@ fn build_tile_data(map: &Map) -> anyhow::Result<(Vec<AstNode>, AstNode)> {
         },
     };
 
+    // This pre-amble stuff should be moved out to build_ast...
     let header_data = vec![
         codegen::AstNode::Ifndef {
             name: format!("{name}_HEADER"),
@@ -49,6 +56,10 @@ fn build_tile_data(map: &Map) -> anyhow::Result<(Vec<AstNode>, AstNode)> {
         codegen::AstNode::Define {
             name: format!("{name}_HEADER"),
             value: String::new(),
+        },
+        codegen::AstNode::Space,
+        codegen::AstNode::Include {
+            filename: String::from("stdint.h"),
         },
         codegen::AstNode::Space,
         codegen::AstNode::Define {
